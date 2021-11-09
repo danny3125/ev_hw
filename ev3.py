@@ -121,6 +121,7 @@ def ev3(cfg):
     Individual.uniprng=uniprng
     Individual.normprng=normprng
     Individual.num_balls=cfg.latticLength
+    Individual.numParticleTypes = cfg.numParticleTypes
     Population.uniprng=uniprng
     Population.crossoverFraction=cfg.crossoverFraction
       

@@ -19,9 +19,10 @@ class Individual:
     normprng=None
     fitFunc=None
     num_balls=None
+    numParticleTypes = None
     def __init__(self):
         x = []
-        for i in range(num_balls): x.append(int(self.uniprng.uniform(0,3)))
+        for i in range(self.num_balls): x.append(int(self.uniprng.uniform(0,3)))
         self.x= x
         self.fit=self.__class__.fitFunc(self.x)
         self.sigma=self.uniprng.uniform(0.9,0.1) #use "normalized" sigma
@@ -39,8 +40,9 @@ class Individual:
         self.sigma=self.sigma*math.exp(self.learningRate*self.normprng.normalvariate(0,1))
         if self.sigma < self.minSigma: self.sigma=self.minSigma
         if self.sigma > self.maxSigma: self.sigma=self.maxSigma
-
-        self.x=self.x+(self.maxLimit-self.minLimit)*self.sigma*self.normprng.normalvariate(0,1)
+        for i in range(len(self.num_balls)):
+            if self.sigma > self.uniprng.random():
+                self.x[i] = self.uniprng.randint(0,len(self.numParticleTypes) - 1)
         self.fit=None
     
     def evaluateFitness(self):
