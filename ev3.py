@@ -25,13 +25,17 @@ class EV3_Config:
     EV3 configuration class
     """
     # class variables
-    sectionName='EV3'
+    sectionName='EV3_lattice'
     options={'populationSize': (int,True),
              'generationCount': (int,True),
              'randomSeed': (int,True),
              'crossoverFraction': (float,True),
              'minLimit': (float,True),
-             'maxLimit': (float,True)}
+             'maxLimit': (float,True),
+             'selfEnergyVector':(list,True),
+             'interactionEnergyMatrix':(list,True),
+             'latticeLength': (int,True),
+             'numParticleTypes':(int,True)}
      
     #constructor
     def __init__(self, inFileName):
@@ -67,8 +71,8 @@ class EV3_Config:
 #Simple fitness function example: 1-D Rastrigin function
 #        
 def fitnessFunc(ball_line):
-    matrix = ??
-    v_vector = ??
+    matrix = cfg.selfEnergyVector
+    v_vector = cfg.interactionEnergyMatrix
     fit_value = 0
     for i in range(len(ball_line)):
         if i == 0:
@@ -116,6 +120,7 @@ def ev3(cfg):
     Individual.fitFunc=fitnessFunc
     Individual.uniprng=uniprng
     Individual.normprng=normprng
+    Individual.num_balls=cfg.latticLength
     Population.uniprng=uniprng
     Population.crossoverFraction=cfg.crossoverFraction
       

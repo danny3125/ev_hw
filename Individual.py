@@ -18,20 +18,20 @@ class Individual:
     uniprng=None
     normprng=None
     fitFunc=None
-
+    num_balls=None
     def __init__(self):
-        self.x=self.uniprng.uniform(self.minLimit,self.maxLimit)
+        x = []
+        for i in range(num_balls): x.append(int(self.uniprng.uniform(0,3)))
+        self.x= x
         self.fit=self.__class__.fitFunc(self.x)
         self.sigma=self.uniprng.uniform(0.9,0.1) #use "normalized" sigma
         
     def crossover(self, other):
         #perform crossover "in-place"
-        alpha=self.uniprng.random()
-        
-        tmp=self.x*alpha+other.x*(1-alpha)
-        other.x=self.x*(1-alpha)+other.x*alpha
+        alpha = Randint(0,len(self.x))
+        tmp = other.x[alpha + 1:len(self.x) - 1] + self.x[0:alpha]
+        other.x=self.x[alpha + 1:len(self.x) - 1] + other.x[0:alpha]
         self.x=tmp
-        
         self.fit=None
         other.fit=None
     
