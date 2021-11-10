@@ -18,20 +18,23 @@ class Individual:
     uniprng=None
     normprng=None
     fitFunc=None
+    num_mutivariables=None
 
     def __init__(self):
-        self.x=self.uniprng.uniform(self.minLimit,self.maxLimit)
+        x = []
+        for i in range(self.num_mutivariables):
+            x.append(self.uniprng.uniform(self.minLimit,self.maxLimit))
+        self.x= x
         self.fit=self.__class__.fitFunc(self.x)
         self.sigma=self.uniprng.uniform(0.9,0.1) #use "normalized" sigma
         
     def crossover(self, other):
         #perform crossover "in-place"
         alpha=self.uniprng.random()
-        
-        tmp=self.x*alpha+other.x*(1-alpha)
-        other.x=self.x*(1-alpha)+other.x*alpha
-        self.x=tmp
-        
+        for i in range(len(self.x)):
+            tmp=self.x[i]*alpha+other.x[i]*(1-alpha)
+            other.x[i]=self.x[i]*(1-alpha)+other.x[i]*alpha
+            self.x[i]=tmp
         self.fit=None
         other.fit=None
     
@@ -39,8 +42,8 @@ class Individual:
         self.sigma=self.sigma*math.exp(self.learningRate*self.normprng.normalvariate(0,1))
         if self.sigma < self.minSigma: self.sigma=self.minSigma
         if self.sigma > self.maxSigma: self.sigma=self.maxSigma
-
-        self.x=self.x+(self.maxLimit-self.minLimit)*self.sigma*self.normprng.normalvariate(0,1)
+        for i in range(len(self.x)):
+            self.x[i]=self.x[i]+(self.maxLimit-self.minLimit)*self.sigma*self.normprng.normalvariate(0,1)
         self.fit=None
     
     def evaluateFitness(self):

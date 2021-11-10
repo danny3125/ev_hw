@@ -15,8 +15,9 @@ import optparse
 import sys
 import yaml
 import math
+import numpy as np
 from random import Random
-from Population import *
+from Population_problem2 import *
 
 
 #EV3 Config class 
@@ -31,7 +32,8 @@ class EV3_Config:
              'randomSeed': (int,True),
              'crossoverFraction': (float,True),
              'minLimit': (float,True),
-             'maxLimit': (float,True)}
+             'maxLimit': (float,True),
+             'num_mutivariables': (int,True)}
      
     #constructor
     def __init__(self, inFileName):
@@ -67,25 +69,30 @@ class EV3_Config:
 #Simple fitness function example: 1-D Rastrigin function
 #        
 def fitnessFunc(x):
-    return -10.0-(0.04*x)**2+10.0*math.cos(0.04*math.pi*x)
+    print(x)
+    sigma_xi = 0.0
+    A = 10.0
+    for xi in x:
+        sigma_xi += (np.square(xi) - A*np.cos(2.0*np.pi*xi))
+    return -(A*len(x) + sigma_xi)#-10.0-(0.04*x)**2+10.0*math.cos(0.04*math.pi*x)
 
 
 #Print some useful stats to screen
 def printStats(pop,gen):
     print('Generation:',gen)
     avgval=0
-    maxval=pop[0].fit 
+    maxval=-(pop[0].fit)
     sigma=pop[0].sigma
     for ind in pop:
         avgval+=ind.fit
-        if ind.fit > maxval:
+        if -ind.fit < maxval:
             maxval=ind.fit
             sigma=ind.sigma
-        print(ind)
+        #print(ind)
 
-    print('Max fitness',maxval)
+    print('Min fitness',maxval)
     print('Sigma',sigma)
-    print('Avg fitness',avgval/len(pop))
+    print('Avg fitness',-(avgval/len(pop)))
     print('')
 
 
@@ -105,6 +112,7 @@ def ev3(cfg):
     Individual.fitFunc=fitnessFunc
     Individual.uniprng=uniprng
     Individual.normprng=normprng
+    Individual.num_mutivariables = cfg.num_mutivariables
     Population.uniprng=uniprng
     Population.crossoverFraction=cfg.crossoverFraction
       
