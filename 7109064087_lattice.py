@@ -16,7 +16,7 @@ import sys
 import yaml
 import math
 from random import Random
-from Population import *
+from Population_lattice import *
 
 
 #EV3 Config class 
