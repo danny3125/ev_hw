@@ -6,7 +6,7 @@
 import copy
 import math
 from operator import attrgetter
-from Individual import *
+from Individual_lattice import *
 
 class Population:
     """
