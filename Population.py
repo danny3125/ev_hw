@@ -22,7 +22,7 @@ class Population:
         self.population=[]
         for i in range(populationSize):
             self.population.append(Individual())                                                                                                                                        
-
+        
     def __len__(self):
         return len(self.population)
     

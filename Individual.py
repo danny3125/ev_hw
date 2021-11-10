@@ -20,16 +20,19 @@ class Individual:
     fitFunc=None
     num_balls=None
     numParticleTypes = None
+    selfEnergyVector = None
+    interactionEnergyMatrix = None
     def __init__(self):
         x = []
-        for i in range(self.num_balls): x.append(int(self.uniprng.uniform(0,3)))
+        for i in range(self.num_balls):
+            x.append(int(self.uniprng.uniform(0,self.numParticleTypes)))
         self.x= x
-        self.fit=self.__class__.fitFunc(self.x)
+        self.fit=self.__class__.fitFunc(self.x,self.interactionEnergyMatrix,self.selfEnergyVector)
         self.sigma=self.uniprng.uniform(0.9,0.1) #use "normalized" sigma
         
     def crossover(self, other):
         #perform crossover "in-place"
-        alpha = Randint(0,len(self.x))
+        alpha = self.uniprng.randint(0,len(self.x))
         tmp = other.x[alpha + 1:len(self.x) - 1] + self.x[0:alpha]
         other.x=self.x[alpha + 1:len(self.x) - 1] + other.x[0:alpha]
         self.x=tmp

@@ -25,7 +25,7 @@ class EV3_Config:
     EV3 configuration class
     """
     # class variables
-    sectionName='EV3_lattice'
+    sectionName='EV3'
     options={'populationSize': (int,True),
              'generationCount': (int,True),
              'randomSeed': (int,True),
@@ -40,7 +40,7 @@ class EV3_Config:
     #constructor
     def __init__(self, inFileName):
         #read YAML config and get EV3 section
-        infile=open(inFileName,'r')
+        infile=open(inFileName,'r',encoding="utf-8")
         ymlcfg=yaml.safe_load(infile)
         infile.close()
         eccfg=ymlcfg.get(self.sectionName,None)
@@ -70,23 +70,22 @@ class EV3_Config:
 
 #Simple fitness function example: 1-D Rastrigin function
 #        
-def fitnessFunc(ball_line):
-    matrix = cfg.selfEnergyVector
-    v_vector = cfg.interactionEnergyMatrix
+def fitnessFunc(ball_line,matrix,v_vector):
     fit_value = 0
+    print(ball_line)
     for i in range(len(ball_line)):
-        if i == 0:
+        if (i == 0):
             fit_value += v_vector[ball_line[i]] + matrix[ball_line[i]][ball_line[i+1]]
-        elif i == (len(ball_line) - 1):
+        elif (i == (len(ball_line) - 1)):
             fit_value += v_vector[ball_line[i]] + matrix[ball_line[i-1]][ball_line[i]]            
         else:
-        fit_value += v_vector[ball_line[i]] + matrix[ball_line[i-1]][ball_line[i]] + matrix[ball_line[i]][ball_line[i+1]]
+            fit_value += v_vector[ball_line[i]] + matrix[ball_line[i-1]][ball_line[i]] + matrix[ball_line[i]][ball_line[i+1]]
         
     return fit_value 
 
 
 #Print some useful stats to screen
-def printStats(pop,gen):
+def printStats(pop,gen):#??????????????? 這裡要改????????
     print('Generation:',gen)
     avgval=0
     maxval=pop[0].fit 
@@ -120,15 +119,16 @@ def ev3(cfg):
     Individual.fitFunc=fitnessFunc
     Individual.uniprng=uniprng
     Individual.normprng=normprng
-    Individual.num_balls=cfg.latticLength
+    Individual.num_balls=cfg.latticeLength
     Individual.numParticleTypes = cfg.numParticleTypes
+    Individual.selfEnergyVector = cfg.selfEnergyVector
+    Individual.interactionEnergyMatrix = cfg.interactionEnergyMatrix
     Population.uniprng=uniprng
     Population.crossoverFraction=cfg.crossoverFraction
-      
+    
     
     #create initial Population (random initialization)
     population=Population(cfg.populationSize)
-        
     #print initial pop stats    
     printStats(population,0)
 
@@ -183,7 +183,8 @@ def main(argv=None):
         
         #print config params
         print(cfg)
-                    
+        print('hello')  
+        print(cfg.interactionEnergyMatrix)          
         #run EV3
         ev3(cfg)
         
