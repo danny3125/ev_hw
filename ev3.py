@@ -81,25 +81,23 @@ def fitnessFunc(ball_line,matrix,v_vector):
         else:
             fit_value += v_vector[ball_line[i]] + matrix[ball_line[i-1]][ball_line[i]] + matrix[ball_line[i]][ball_line[i+1]]
         
-    return fit_value 
+    return (-fit_value)
 
 
 #Print some useful stats to screen
-def printStats(pop,gen):#??????????????? 這裡要改????????
+def printStats(pop,gen):
     print('Generation:',gen)
     avgval=0
-    maxval=pop[0].fit 
+    minval=pop[0].fit
     sigma=pop[0].sigma
     for ind in pop:
         avgval+=ind.fit
-        if ind.fit > maxval:
-            maxval=ind.fit
+        if ind.fit < minval:
+            minval=ind.fit
             sigma=ind.sigma
-        print(ind)
-
-    print('Max fitness',maxval)
+    print('Min energy cost',-minval)
     print('Sigma',sigma)
-    print('Avg fitness',avgval/len(pop))
+    print('Avg energy cost',-(avgval/len(pop)))
     print('')
 
 
@@ -119,7 +117,7 @@ def ev3(cfg):
     Individual.fitFunc=fitnessFunc
     Individual.uniprng=uniprng
     Individual.normprng=normprng
-    Individual.num_balls=cfg.latticeLength
+    Individual.latticeLength=cfg.latticeLength
     Individual.numParticleTypes = cfg.numParticleTypes
     Individual.selfEnergyVector = cfg.selfEnergyVector
     Individual.interactionEnergyMatrix = cfg.interactionEnergyMatrix
@@ -136,19 +134,19 @@ def ev3(cfg):
     for i in range(cfg.generationCount):
         #create initial offspring population by copying parent pop
         offspring=population.copy()
-        
+
         #select mating pool
         offspring.conductTournament()
 
         #perform crossover
         offspring.crossover()
-        
+
         #random mutation
         offspring.mutate()
-        
+
         #update fitness values
-        offspring.evaluateFitness()        
-            
+        offspring.evaluateFitness()
+        print('here')
         #survivor selection: elitist truncation using parents+offspring
         population.combinePops(offspring)
         population.truncateSelect(cfg.populationSize)
