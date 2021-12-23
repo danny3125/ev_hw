@@ -10,13 +10,26 @@
 #   - Uses binary tournament selection for mating pool
 #   - Uses elitist truncation selection for survivors
 #
+'''
+So, we begin on a set of chesses with max rank 2, three types of rank 1 chess, one type of rank 2, 
+with a serie of bonus strangth if you combine a rank 2 chess with a particular rank 1 chess,
+8 players are included in one game, with health like 10, with max player level like 5,
+the state we have included the chess table, unsorted, the 'strength value' your set will become if you 
+take an action like 'take it all',or 'just pick one'
+there is no limit on the number of fight rounds, but every five rounds, there is a 'strength test' for
+every player, if the player lose, they will loss health, 
+the imformation the players will get on each round includes: health, set strangth, chess table, money.  
+the action the player can choose is to decide the money you want to keep in this round,
+and how to use the money you decide to spend.
+'''
 
 import optparse
 import sys
 import yaml
 import math
 from random import Random
-from Population_lattice import *
+from Population_autochess import *
+from autochess_sys import *
 
 
 #EV3 Config class 
@@ -30,12 +43,12 @@ class EV3_Config:
              'generationCount': (int,True),
              'randomSeed': (int,True),
              'crossoverFraction': (float,True),
-             'minLimit': (float,True),
-             'maxLimit': (float,True),
-             'selfEnergyVector':(list,True),
              'interactionEnergyMatrix':(list,True),
-             'latticeLength': (int,True),
-             'numParticleTypes':(int,True)}
+             'faction_strength_table':(list,True),
+             'faction_threshold':(list,True),
+             'maxlevel':(int,True)
+             'chesstypelist':(list,True)
+             }
      
     #constructor
     def __init__(self, inFileName):
@@ -68,21 +81,6 @@ class EV3_Config:
         return str(yaml.dump(self.__dict__,default_flow_style=False))
          
 
-#Simple fitness function example: 1-D Rastrigin function
-#        
-def fitnessFunc(ball_line,matrix,v_vector):
-    fit_value = 0
-    print(ball_line)
-    for i in range(len(ball_line)):
-        if (i == 0):
-            fit_value += v_vector[ball_line[i]] + matrix[ball_line[i]][ball_line[i+1]]
-        elif (i == (len(ball_line) - 1)):
-            fit_value += v_vector[ball_line[i]] + matrix[ball_line[i-1]][ball_line[i]]            
-        else:
-            fit_value += v_vector[ball_line[i]] + matrix[ball_line[i-1]][ball_line[i]] + matrix[ball_line[i]][ball_line[i+1]]
-        
-    return (-fit_value)
-
 
 #Print some useful stats to screen
 def printStats(pop,gen):
@@ -99,36 +97,21 @@ def printStats(pop,gen):
     print('Sigma',sigma)
     print('Avg energy cost',-(avgval/len(pop)))
     print('')
-
+def fitfunc()
 
 #EV3:
 #            
 def ev3(cfg):
-    #start random number generators
-    uniprng=Random()
-    uniprng.seed(cfg.randomSeed)
-    normprng=Random()
-    normprng.seed(cfg.randomSeed+101)
-
     #set static params on classes
     # (probably not the most elegant approach, but let's keep things simple...)
-    Individual.minLimit=cfg.minLimit
-    Individual.maxLimit=cfg.maxLimit
-    Individual.fitFunc=fitnessFunc
-    Individual.uniprng=uniprng
-    Individual.normprng=normprng
-    Individual.latticeLength=cfg.latticeLength
-    Individual.numParticleTypes = cfg.numParticleTypes
-    Individual.selfEnergyVector = cfg.selfEnergyVector
-    Individual.interactionEnergyMatrix = cfg.interactionEnergyMatrix
-    Population.uniprng=uniprng
-    Population.crossoverFraction=cfg.crossoverFraction
-    
-    
+    system.faction_strength_table = cfg.faction_strength_table
+    system.faction_threshold = cfg.faction_threshold
+    system.chesstypelist = cfg.chesstypelist
+    system.maxlevel = cfg.maxlevel
     #create initial Population (random initialization)
     population=Population(cfg.populationSize)
     #print initial pop stats    
-    printStats(population,0)
+    #printStats(population,0)
 
     #evolution main loop
     for i in range(cfg.generationCount):
@@ -146,7 +129,6 @@ def ev3(cfg):
 
         #update fitness values
         offspring.evaluateFitness()
-        print('here')
         #survivor selection: elitist truncation using parents+offspring
         population.combinePops(offspring)
         population.truncateSelect(cfg.populationSize)
@@ -180,14 +162,12 @@ def main(argv=None):
         cfg=EV3_Config(options.inputFileName)
         
         #print config params
-        print(cfg)
-        print('hello')  
-        print(cfg.interactionEnergyMatrix)          
+        print(cfg)      
         #run EV3
         ev3(cfg)
         
         if not options.quietMode:                    
-            print('EV3 Completed!')    
+            print('EA autochess Completed!')    
     
     except Exception as info:
         if 'options' in vars() and options.debugMode:
