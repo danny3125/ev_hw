@@ -40,14 +40,16 @@ class EV3_Config:
     # class variables
     sectionName='EV3'
     options={'populationSize': (int,True),
+             'total_epochs': (int,True),
              'generationCount': (int,True),
-             'randomSeed': (int,True),
-             'crossoverFraction': (float,True),
-             'interactionEnergyMatrix':(list,True),
+             'crossoverFraction':(float,True),
              'faction_strength_table':(list,True),
+             'proba_matrix':(list,True),
              'faction_threshold':(list,True),
-             'maxlevel':(int,True)
-             'chesstypelist':(list,True)
+             'maxlevel':(int,True),
+             'chesstypelist':(list,True),
+             'maxchess_num':(int,True),
+             'table_length':(int,True)
              }
      
     #constructor
@@ -81,60 +83,44 @@ class EV3_Config:
         return str(yaml.dump(self.__dict__,default_flow_style=False))
          
 
-
-#Print some useful stats to screen
-def printStats(pop,gen):
-    print('Generation:',gen)
-    avgval=0
-    minval=pop[0].fit
-    sigma=pop[0].sigma
-    for ind in pop:
-        avgval+=ind.fit
-        if ind.fit < minval:
-            minval=ind.fit
-            sigma=ind.sigma
-    print('Min energy cost',-minval)
-    print('Sigma',sigma)
-    print('Avg energy cost',-(avgval/len(pop)))
-    print('')
-def fitfunc()
-
-#EV3:
-#            
+        
 def ev3(cfg):
+    uniprng = Random()
     #set static params on classes
     # (probably not the most elegant approach, but let's keep things simple...)
     system.faction_strength_table = cfg.faction_strength_table
     system.faction_threshold = cfg.faction_threshold
     system.chesstypelist = cfg.chesstypelist
     system.maxlevel = cfg.maxlevel
+    system.table_length = cfg.table_length
+    system.maxchess_num = cfg.maxchess_num
+    system.proba_matrix = cfg.proba_matrix
     #create initial Population (random initialization)
-    population=Population(cfg.populationSize)
+    Population.uniprng=uniprng
+    Population.crossoverFraction=cfg.crossoverFraction
+    population=Population(cfg.populationSize,cfg.total_epochs)
     #print initial pop stats    
     #printStats(population,0)
 
     #evolution main loop
     for i in range(cfg.generationCount):
         #create initial offspring population by copying parent pop
+        print('generation:',i)
         offspring=population.copy()
-
-        #select mating pool
+        offspring.evaluateFitness()
         offspring.conductTournament()
-
         #perform crossover
         offspring.crossover()
-
         #random mutation
         offspring.mutate()
-
-        #update fitness values
+        offspring.game_on()
         offspring.evaluateFitness()
+        population.evaluateFitness()
+        #update fitness values
         #survivor selection: elitist truncation using parents+offspring
         population.combinePops(offspring)
         population.truncateSelect(cfg.populationSize)
-        
         #print population stats    
-        printStats(population,i+1)
         
         
 #

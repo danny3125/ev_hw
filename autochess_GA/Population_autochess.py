@@ -19,21 +19,21 @@ class Population:
     """
     Population
     """
-    
+    uniprng=None
+    crossoverFraction=None
     def __init__(self, populationSize, total_epochs):
         """
         Population constructor
         """
         self.population=[]
         for i in range(populationSize):
-            self.population.append(Individual())    #this part should be modified to load the individuals                                                                                                                                    
+            self.population.append(Individual())  #this part should be modified to load the individuals                                                                                                                                    
         self.total_epochs = total_epochs
     
     def game_on(self):
         for epoch in range(1,self.total_epochs+1):
             for player in self.population:
                 player.choicetime(epoch)
-        
     def __len__(self):
         return len(self.population)
     
@@ -43,49 +43,29 @@ class Population:
     def __setitem__(self,key,newValue):
         self.population[key]=newValue
         
+    def evaluateFitness(self):
+        for individual in self.population: individual.evaluateFitness()
+        
     def copy(self):
         return copy.deepcopy(self)
         
     def crossover(self):
-        offspring = []
-        for _ in range((pop_size - len(self.population)) // 2):
-            parent1 = random.choice(agents)
-            parent2 = random.choice(agents)
-            child1 = Agent(network)
-            child2 = Agent(network)
-            
-            shapes = [a.shape for a in parent1.neural_network.weights]
-            
-            genes1 = np.concatenate([a.flatten() for a in parent1.neural_network.weights])
-            genes2 = np.concatenate([a.flatten() for a in parent2.neural_network.weights])
-            
-            split = random.ragendint(0,len(genes1)-1)
-            child1_genes = np.asrray(genes1[0:split].tolist() + genes2[split:].tolist())
-            child2_genes = np.array(genes1[0:split].tolist() + genes2[split:].tolist())
-            
-            child1.neural_network.weights = unflatten(child1_genes,shapes)
-            child2.neural_network.weights = unflatten(child2_genes,shapes)
-            
-            offspring.append(child1)
-            offspring.append(child2)
-        agents.extend(offspring)
-        return agents
-    def mutation(self):
-        for agent in agents:
-            if random.uniform(0.0, 1.0) <= 0.1:
-                weights = agent.neural_network.weights
-                shapes = [a.shape for a in weights]
-            flattened = np.concatenate([a.flatten() for a in weights])
-            randint = random.randint(0,len(flattened)-1)
-            flattened[randint] = np.random.randn()
-        newarray = []
-        indeweights = 0
-        for shape in shapes:
-            size = np.product(shape)
-            newarray.append(flattened[indeweights : indeweights + size].reshape(shape))
-            indeweights += size
-            agent.neural_network.weights = newarray
-        return agents             
+        indexList1=list(range(len(self)))
+        indexList2=list(range(len(self)))
+        self.uniprng.shuffle(indexList1)
+        self.uniprng.shuffle(indexList2)
+        if self.crossoverFraction == 1.0:    
+            for index1,index2 in zip(indexList1,indexList2):
+                self[index1].crossover(self[index2])
+        else:
+            for index1,index2 in zip(indexList1,indexList2):
+                rn=self.uniprng.random()
+                if rn < self.crossoverFraction:
+                    self[index1].crossover(self[index2])
+
+    def mutate(self):     
+        for individual in self.population:
+            individual.mutation()           
     def conductTournament(self):#choose the better networks 
         # binary tournament
         indexList1=list(range(len(self)))
@@ -108,19 +88,27 @@ class Population:
         #compete
         newPop=[]        
         for index1,index2 in zip(indexList1,indexList2):
-            if self[index1].fit > self[index2].fit:
+            if self[index1].strength > self[index2].strength:
                 newPop.append(copy.deepcopy(self[index1]))
-            elif self[index1].fit < self[index2].fit:
+            elif self[index1].strength < self[index2].strength:
                 newPop.append(copy.deepcopy(self[index2]))
             else:
                 rn=self.uniprng.random()
                 if rn > 0.5:
                     newPop.append(copy.deepcopy(self[index1]))
                 else:
-                    newPop.append(copy.deepcopy(self[index2]))
-        
+                    newPop.append(copy.deepcopy(self[index2]))        
         # overwrite old pop with newPop    
-        self.population=newPop        
+        self.population=newPop    
+    def combinePops(self,otherPop):
+        self.population.extend(otherPop.population)
+
+    def truncateSelect(self,newPopSize):
+        #sort by fitness
+        self.population.sort(key=attrgetter('strength'),reverse=True)
+        
+        #then truncate the bottom
+        self.population=self.population[:newPopSize] 
 
 
         

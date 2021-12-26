@@ -41,16 +41,11 @@ class neural_network:
 test = neural_network([[3,5,'sigmoid'],[None,3,'sigmoid'],[None,10,'softmax']])
 print(test.propagate([3,5,9]))
 '''
-test = [1,2,3,4,5]
-ttes = [2,3]
-temp = 0
-temp_arr = []
-for i in ttes:
-    temp_arr.append(test[temp:i+temp])
-    temp +=i
-    
-print(temp_arr)
-
-
+test = np.array([[1,2,3],[0,0,2],[0,0,0]])
+test_1 = np.nonzero(test)
+#for item in test_1
+print(test_1[0])
+for item in zip(test_1[0],test_1[1]):
+    print(item)
 
 

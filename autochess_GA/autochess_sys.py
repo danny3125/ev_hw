@@ -14,18 +14,16 @@ class system:
     maxlevel = None
     table_length = None
     maxchess_num = None
-    def __init__(self):
-        self.proba_table = [0] * len(chesstypelist)
-        self.proba_table[0] = 1
-        self.proba_matrix = []
-        self.strength_table = [i for i in range(1,len(chesstypelist)+1)]
-        self.faction_strength_table = faction_strength_table # waiting for a file call
-        self.chesstypelist = chesstypelist # chesstypelist = [level1_types,level2....] len = max chess level
-        self.faction_threshold = faction_threshold # waiting for a file call
-        self.maxlevel = maxlevel
-        self.table_length = table_length
-        self.maxchess_num = maxchess_num
-        
+    proba_matrix = None
+    def __init__(cls):
+        #self.proba_table = [0] * len(chesstypelist)
+        #self.faction_strength_table = faction_strength_table # waiting for a file call
+        #self.chesstypelist = chesstypelist # chesstypelist = [level1_types,level2....] len = max chess leve
+        #self.faction_threshold = faction_threshold # waiting for a file call
+        #self.maxlevel = maxlevel
+        #self.table_length = table_length
+        #self.maxchess_num = maxchess_num
+        '''
         for level in range(1,self.maxlevel+1):
             self.proba_matrix.append(copy.deepcopy(self.proba_table))
             for i in range(len(self.proba_table)):
@@ -41,25 +39,27 @@ class system:
                     
                 else:
                     break
-        
+        '''
         
     
-    def chessoffer(self, level):
-        temp = self.proba_matrix[level-1]
-        choice = np.random.choice(len(temp),self.table_length,p = temp)
+    def chessoffer(cls,level):
+        temp = cls.proba_matrix[level-1]
+        choice = np.random.choice(len(temp),cls.table_length,p = temp)
         final_choice = []
         for item in choice :
-            type_inlevel = np.random.randint(0,self.typelist[int(item)],1)
+            type_inlevel = np.random.randint(0,cls.chesstypelist[int(item)],1)
             final_choice.append([item,int(type_inlevel[0])])
         return final_choice #final_choice is like [[1,0],[0,2],..] ,length = table_length
     
-    def calculate_strength(self,chess_set):#chess set = [[1,0],[0,2],......]
+    def calculate_strength(cls,chess_set):#chess_set = numpy_matrix 3*num_chess_rank*num_chess_types
         bonus_strength = []
         strength = 0
-        for item in chess_set:
-            strength += self.strength_table[item[0]]
-            bonus_strength.append(self.faction_strength_table[int(item[0])][int(item[1])])
-            print(bonus_strength)
+        chess_id = np.nonzero(chess_set)
+        strength_table = [i for i in range(1,len(cls.chesstypelist)+1)]
+        for item in zip(chess_id[0],chess_id[1],chess_id[2]):
+            #print('chess:',item,'number:',chess_set[item[0]][item[1]][item[2]])
+            strength += (strength_table[item[1]] * (20*item[0]+1)) * chess_set[item[0]][item[1]][item[2]]
+            bonus_strength.append(cls.faction_strength_table[int(item[1])][int(item[2])])
             maxfrac = max(bonus_strength)
             bonus_strength = np.array(bonus_strength)
             for frac in range(maxfrac):
@@ -68,16 +68,20 @@ class system:
                 for i in bonus_strength:
                     if i == 0:
                         count+=1
-                if count >= self.faction_threshold[0][frac]:
-                    strength += self.faction_threshold[1][frac]
+                if count >= cls.faction_threshold[frac][0]:
+                    strength += cls.faction_threshold[frac][1]
             bonus_strength += maxfrac
             bonus_strength = bonus_strength.tolist()
+        if strength > 30:
+            print(bonus_strength)
+            print(chess_id[0])
+            print(strength)
         return strength
-    def money_offer(self, money, epoch):
-        if epoch > 5:
-            epoch = 5
-        return epoch + int(money/10)  
-    def chess_sell(self, chess): #chess like [0,3,2] => level,rank,type of chess 
+    def money_offer(money, epoch):
+        if epoch > 3:
+            epoch = 3
+        return epoch# + int(money/10)  
+    def chess_sell(chess): #chess like [0,3,2] => level,rank,type of chess 
         if chess[1] == 0:
             return (chess[0]*2 + 1)
         else:

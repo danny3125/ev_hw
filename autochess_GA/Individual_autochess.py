@@ -2,7 +2,7 @@
 # Individual.py
 #
 #
-from autochess_sys import *
+from autochess_sys import system
 import math
 import random
 import numpy as np
@@ -25,7 +25,14 @@ def activation(acti_type,x):
         return np.exp(x) / np.sum(np.exp(x), axis=0)
     else :
         print('wrong type of activate function!!')
-
+def unflatten(flattened,shapes):
+    newarray = []
+    index = 0
+    for shape in shapes:
+        size = np.product(shape)
+        newarray.append(flattened[index : index + size].reshape(shape))
+        index += size
+    return newarray
 class Individual:
     """
     Individual
@@ -33,7 +40,7 @@ class Individual:
     def __init__(self):
         class neural_network:
             def __init__(self,network): # network be like [[3,10,sigmoid],[None,1,sigmoid]]
-                self.weight = []
+                self.weights = []
                 self.activations = []
                 for layer in network:
                     if layer[0] != None:
@@ -67,11 +74,11 @@ class Individual:
                 input_data = data
                 for i in range(len(self.weights)):
                     z = np.dot(input_data,self.weights[i])
-                    a = self.activations[i](z)
+                    a = activation(self.activations[i],z)
                     input_data = a
                 yhat = a
                 return yhat
-        self.strength= 0
+        self.strength= None
         chesstypelist = system.chesstypelist
         level = len(chesstypelist)
         types = max(chesstypelist)
@@ -79,74 +86,108 @@ class Individual:
         self.hand_cards = np.zeros((3,level,types))
         self.money = 0
         self.level = 1
-        self.fit=None
-        self.chess_table = system.chessoffer(self.level)
         self.maxchess = system.maxchess_num
         self.P_chess_nn = neural_network([[self.maxchess*3,10,'RELU'],[None,10,'RELU'],[None,nn_output,'softmax']])
     def hand_cards(self,chess):
         self.hand_cards[0][chess[0]][chess[1]]+=1
     def refreshtable(self):
         self.money = self.money - 2
-        return system.chessoffer(self.level)
+        return system.chessoffer(system,self.level)
                 
     def state_check(self):# state_check should be a binary tree
         self.hand_cards[1] = self.hand_cards[0]/3
         self.hand_cards[1] = self.hand_cards[1].astype(int)
         self.hand_cards[1] = self.hand_cards[1].astype(float)
+        self.hand_cards[0] = self.hand_cards[0]%3
         self.hand_cards[2] = self.hand_cards[1]/3
         self.hand_cards[2] = self.hand_cards[2].astype(int)
         self.hand_cards[2] = self.hand_cards[2].astype(float)
+        self.hand_cards[1] = self.hand_cards[1]%3
     def picking_chess(self,level_distri):
         for chess in self.chess_table:
-            if level_distri[chess[0]][chess[1]] > 1/sum(system.chesstypelist):
-                self.money -= chess[0]
+            if level_distri[chess[0]][chess[1]] >= 1/sum(system.chesstypelist):
+                self.money -= chess[0] + 1
                 self.hand_cards[0][chess[0]][chess[1]]+=1
                 self.state_check()
+                if self.money <= 0:
+                    break
             else:
                 pass
     def choicetime(self, epoch):
         # in a single epoch, a player should go through three part : get money, buying, end epoch
         # buying is the most tricky part of this game, it needs a 'brain'
+        if epoch % 3 == 0 and self.level < system.maxlevel:
+            self.level += 1
         self.money += system.money_offer(self.money, epoch)
         #now I have chess table and money ,what chould I do ?
         #what I want is to build at least two nn for an individual, one nn look at the chess set it has,
         #and decide how much it wants for all type of chesses.
         #another focus on whether it should buy the chess on the chess table, based on the money it has.
         self.state_check()
-        chess_table = systen.chessoffer(self.level)
+        self.chess_table = system.chessoffer(system,self.level)
         #deciding whether to sell or not sell a chess 
         cards_inhand = np.nonzero(self.hand_cards) # cards_inhand is a len = 3 tuple
-        all_cards_num = sum(self.hand_cards)
-        
-        while all_cards_num > self.maxchess:
+        all_cards_num = np.sum(self.hand_cards)
+        while (all_cards_num > self.maxchess):
             self.money += system.chess_sell([cards_inhand[0][0],cards_inhand[1][0],cards_inhand[2][0]])
             self.hand_cards[cards_inhand[0][0]][cards_inhand[1][0]][cards_inhand[2][0]] -=1
             cards_inhand = np.nonzero(self.hand_cards)
-            
+            all_cards_num -= 1
         nn_input = [0]*(self.maxchess*3)    
-        for i in range(len(cards_inhand[0])):
-            nn_input[3*i] = cards_inhand[0][i]
-            nn_input[3*i+1] = cards_inhand[1][i]
-            nn_input[3*i+2] = cards_inhand[2][i]
-        temp_hand_cards = self.hand_cards - 1
-        cards_inhand = np.nonzero(temp_hand_cards)
-        for i in range(len(cards_inhand[0])):
-            nn_input[3*i] = cards_inhand[0][i]
-            nn_input[3*i+1] = cards_inhand[1][i]
-            nn_input[3*i+2] = cards_inhand[2][i]
-        nn_input = np.araray(nn_input)
-        softmax_distri = self.P_chess_nn.prpagate(nn_input)
-        while(self.money > 0):
-            level_distri = []
-            temp_index = 0
-            for level in system.chesstypelist:
-                level_distri.append(softmax_distri[temp_index:level+temp_index])
-                temp_index += level
-            # Now we have the softmax probability of all the chess type in the game, so, how do I use
-            # this imformation ?
-            self.picking_chess()
-            if self.money > 60 or all_cards_num < self.maxchess:
-                self.refreshtable(level_distri)
+        if len(cards_inhand[0]) > 0:
+            index = 0
+            for card in zip(cards_inhand[0],cards_inhand[1],cards_inhand[2]):
+                for i in range(int(self.hand_cards[card[0]][card[1]][card[2]])):
+                    nn_input[index], nn_input[index+1], nn_input[index+2] = card[0], card[1], card[2]
+                    index += 3
+        nn_input = np.array(nn_input)
+        softmax_distri = self.P_chess_nn.propagate(nn_input)
+        level_distri = []
+        temp_index = 0
+        for level in system.chesstypelist:
+            level_distri.append(softmax_distri[temp_index:level+temp_index])
+            temp_index += level
+        # Now we have the softmax probability of all the chess type in the game, so, how do I use
+        # this imformation ?
+        self.picking_chess(level_distri)
+        all_cards_num = np.sum(self.hand_cards)
+        while (all_cards_num > self.maxchess):
+            self.money += system.chess_sell([cards_inhand[0][0],cards_inhand[1][0],cards_inhand[2][0]])
+            self.hand_cards[cards_inhand[0][0]][cards_inhand[1][0]][cards_inhand[2][0]] -=1
+            cards_inhand = np.nonzero(self.hand_cards)
+            all_cards_num -= 1
+        if epoch == 20: 
+            self.money = 0
+        #if self.money > 60 or all_cards_num < self.level:
+            #self.refreshtable()
+    def evaluateFitness(self):
+        if self.strength == None :self.strength = system.calculate_strength(system,self.hand_cards)
+    def crossover(self, other):
+        shapes = [a.shape for a in self.P_chess_nn.weights]
+        genes1 = np.concatenate([a.flatten() for a in self.P_chess_nn.weights])
+        genes2 = np.concatenate([a.flatten() for a in other.P_chess_nn.weights])
+        split = random.randint(0,len(genes1)-1)
+        child1_genes = np.array(genes1[0:split].tolist() + genes2[split:].tolist())
+        child2_genes = np.array(genes2[0:split].tolist() + genes1[split:].tolist())
+        self.P_chess_nn.weights = unflatten(child1_genes,shapes)
+        other.P_chess_nn.weights = unflatten(child2_genes,shapes)
+        self.strength = None
+        other.strength = None
+    def mutation(self):
+        if random.uniform(0.0, 1.0) <= 0.1:
+            weights = self.P_chess_nn.weights
+            shapes = [a.shape for a in weights]
+            flattened = np.concatenate([a.flatten() for a in weights])
+            randint = random.randint(0,len(flattened)-1)
+            flattened[randint] = np.random.randn()
+            newarray = []
+            indeweights = 0
+            for shape in shapes:
+                size = np.product(shape)
+                newarray.append(flattened[indeweights : indeweights + size].reshape(shape))
+                indeweights += size
+                self.P_chess_nn.weights = newarray 
+        self.strength = None
             
                         
             
