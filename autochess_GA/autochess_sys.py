@@ -55,11 +55,11 @@ class system:
         bonus_strength = []
         strength = 0
         chess_id = np.nonzero(chess_set)
-        strength_table = [i for i in range(1,len(cls.chesstypelist)+1)]
         for item in zip(chess_id[0],chess_id[1],chess_id[2]):
             #print('chess:',item,'number:',chess_set[item[0]][item[1]][item[2]])
-            strength += (strength_table[item[1]] * (20*item[0]+1)) * chess_set[item[0]][item[1]][item[2]]
+            strength += ((item[1]+1) * (2*item[0]+1)) * chess_set[item[0]][item[1]][item[2]]
             bonus_strength.append(cls.faction_strength_table[int(item[1])][int(item[2])])
+        if len(bonus_strength) > 0:
             maxfrac = max(bonus_strength)
             bonus_strength = np.array(bonus_strength)
             for frac in range(maxfrac):
@@ -72,10 +72,6 @@ class system:
                     strength += cls.faction_threshold[frac][1]
             bonus_strength += maxfrac
             bonus_strength = bonus_strength.tolist()
-        if strength > 30:
-            print(bonus_strength)
-            print(chess_id[0])
-            print(strength)
         return strength
     def money_offer(money, epoch):
         if epoch > 3:

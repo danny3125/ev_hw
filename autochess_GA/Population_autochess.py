@@ -105,8 +105,17 @@ class Population:
 
     def truncateSelect(self,newPopSize):
         #sort by fitness
+        avg_strength = 0
         self.population.sort(key=attrgetter('strength'),reverse=True)
-        
+        for item in self.population:
+            avg_strength += item.strength
+        avg_strength /= len(self.population)
+        print('all_avg:',avg_strength)
+        avg_strength = 0
+        for item in self.population[:int(len(self.population)/4)]:
+            avg_strength += item.strength
+        avg_strength /= (len(self.population)/4)
+        print('best_quarter avg:',avg_strength)
         #then truncate the bottom
         self.population=self.population[:newPopSize] 
 
