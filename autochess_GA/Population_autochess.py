@@ -34,6 +34,8 @@ class Population:
         for epoch in range(1,self.total_epochs+1):
             for player in self.population:
                 player.choicetime(epoch)
+                player.strength = None
+        
     def __len__(self):
         return len(self.population)
     
@@ -115,7 +117,13 @@ class Population:
         for item in self.population[:int(len(self.population)/4)]:
             avg_strength += item.strength
         avg_strength /= (len(self.population)/4)
+        avg_ten_strength = 0
+        for item in self.population[:10]:
+            avg_ten_strength += item.strength
+        avg_ten_strength/=10
         print('best_quarter avg:',avg_strength)
+        print('best_avg_ten_strength:',avg_ten_strength)
+        print('best_strength:',self.population[0].strength)
         #then truncate the bottom
         self.population=self.population[:newPopSize] 
 

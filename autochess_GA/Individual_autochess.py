@@ -87,7 +87,8 @@ class Individual:
         self.money = 0
         self.level = 1
         self.maxchess = system.maxchess_num
-        self.P_chess_nn = neural_network([[self.maxchess*3,20,'sigmoid'],[None,20,'sigmoid'],[None,20,'sigmoid'],[None,nn_output,'softmax']])
+        self.P_chess_nn = neural_network([[self.maxchess*3,20,'RELU'],[None,20,'RELU'],[None,20,'RELU'],[None,nn_output,'softmax']])
+        self.S_chess_nn = neural_network([[self.maxchess*3+system.table_length*3,20,'RELU'],[None,20,'RELU'],[None,20,'RELU'],[None,self.maxchess+system.table_length,'RELU']])
     def hand_cards(self,chess):
         self.hand_cards[0][chess[0]][chess[1]]+=1
     def refreshtable(self):
@@ -134,17 +135,38 @@ class Individual:
         #deciding whether to sell or not sell a chess 
         cards_inhand = np.nonzero(self.hand_cards) # cards_inhand is a len = 3 tuple
         all_cards_num = np.sum(self.hand_cards)
+        nn_input = [0]*(self.maxchess*3 + system.table_length*3)    
         while (all_cards_num > self.maxchess):
-            self.money += system.chess_sell([cards_inhand[0][0],cards_inhand[1][0],cards_inhand[2][0]])
-            self.hand_cards[cards_inhand[0][0]][cards_inhand[1][0]][cards_inhand[2][0]] -=1
-            cards_inhand = np.nonzero(self.hand_cards)
-            all_cards_num -= 1
+            index = 0
+            for card in zip(cards_inhand[0],cards_inhand[1],cards_inhand[2]):
+                for i in range(int(self.hand_cards[card[0]][card[1]][card[2]])):
+                    nn_input[index], nn_input[index+1], nn_input[index+2] = (card[0]+1)*10, (card[1]+1)*10, (card[2]+1)*10
+                    index += 3
+            nn_input = np.array(nn_input)
+            softmax_distri = self.S_chess_nn.propagate(nn_input)
+            sell_chess = np.argmax(softmax_distri)
+            while(True):
+                if (sell_chess < len(cards_inhand[0])):
+                    sell_card = [cards_inhand[0][sell_chess],cards_inhand[1][sell_chess],cards_inhand[2][sell_chess]]
+                    if self.hand_cards[sell_card[0]][sell_card[1]][sell_card[2]] > 0:
+                        self.hand_cards[sell_card[0]][sell_card[1]][sell_card[2]] -= 1
+                        cards_inhand = np.nonzero(self.hand_cards)
+                        all_cards_num -= 1
+                        break
+                    else :
+                        print('ohoh, delete the wrong card')
+                        break
+                else:
+                    if sell_chess > 0:
+                        sell_chess -= 1
+                    else:
+                        print('something wrong with the sellcard index')
         nn_input = [0]*(self.maxchess*3)    
         if len(cards_inhand[0]) > 0:
             index = 0
             for card in zip(cards_inhand[0],cards_inhand[1],cards_inhand[2]):
                 for i in range(int(self.hand_cards[card[0]][card[1]][card[2]])):
-                    nn_input[index], nn_input[index+1], nn_input[index+2] = card[0], card[1], card[2]
+                    nn_input[index], nn_input[index+1], nn_input[index+2] = (card[0])*10, (card[1]+1)*(card[0]*3+1)*10, (card[2]+1)*(card[0]*3+1)*10
                     index += 3
         nn_input = np.array(nn_input)
         softmax_distri = self.P_chess_nn.propagate(nn_input)
@@ -159,10 +181,32 @@ class Individual:
             if (self.picking_chess(level_distri) or self.money <= 0):
                 break
             self.refreshtable()
+        cards_inhand = np.nonzero(self.hand_cards)
         all_cards_num = np.sum(self.hand_cards)
+        nn_input = [0]*(self.maxchess*3 + system.table_length*3)    
         while (all_cards_num > self.maxchess):
-            self.money += system.chess_sell([cards_inhand[0][0],cards_inhand[1][0],cards_inhand[2][0]])
-            self.hand_cards[cards_inhand[0][0]][cards_inhand[1][0]][cards_inhand[2][0]] -=1
+            index = 0
+            for card in zip(cards_inhand[0],cards_inhand[1],cards_inhand[2]):
+                for i in range(int(self.hand_cards[card[0]][card[1]][card[2]])):
+                    nn_input[index], nn_input[index+1], nn_input[index+2] = (card[0]+1)*10, (card[1]+1)*10, (card[2]+1)*10
+                    index += 3
+            nn_input = np.array(nn_input)
+            softmax_distri = self.S_chess_nn.propagate(nn_input)
+            sell_chess = np.argmax(softmax_distri)
+            while(True):
+                if (sell_chess < len(cards_inhand[0])):
+                    sell_card = [cards_inhand[0][sell_chess],cards_inhand[1][sell_chess],cards_inhand[2][sell_chess]]
+                    if self.hand_cards[sell_card[0]][sell_card[1]][sell_card[2]] > 0:
+                        self.hand_cards[sell_card[0]][sell_card[1]][sell_card[2]] -= 1
+                        break
+                    else :
+                        print('ohoh, delete the wrong card')
+                        break
+                else:
+                    if sell_chess > 0:
+                        sell_chess -= 1
+                    else:
+                        print('something wrong with the sellcard index')
             cards_inhand = np.nonzero(self.hand_cards)
             all_cards_num -= 1
         if epoch == 20: 
@@ -186,10 +230,19 @@ class Individual:
         child2_genes = np.array(genes2[0:split].tolist() + genes1[split:].tolist())
         self.P_chess_nn.weights = unflatten(child1_genes,shapes)
         other.P_chess_nn.weights = unflatten(child2_genes,shapes)
+        
+        shapes = [a.shape for a in self.S_chess_nn.weights]
+        genes1 = np.concatenate([a.flatten() for a in self.S_chess_nn.weights])
+        genes2 = np.concatenate([a.flatten() for a in other.S_chess_nn.weights])
+        split = random.randint(0,len(genes1)-1)
+        child1_genes = np.array(genes1[0:split].tolist() + genes2[split:].tolist())
+        child2_genes = np.array(genes2[0:split].tolist() + genes1[split:].tolist())
+        self.S_chess_nn.weights = unflatten(child1_genes,shapes)
+        other.S_chess_nn.weights = unflatten(child2_genes,shapes)
         self.strength = None
         other.strength = None
     def mutation(self):
-        if random.uniform(0.0, 1.0) <= 0.1:
+        if random.uniform(0.0, 1.0) <= 0.05:
             weights = self.P_chess_nn.weights
             shapes = [a.shape for a in weights]
             flattened = np.concatenate([a.flatten() for a in weights])
@@ -202,6 +255,19 @@ class Individual:
                 newarray.append(flattened[indeweights : indeweights + size].reshape(shape))
                 indeweights += size
                 self.P_chess_nn.weights = newarray 
+        if random.uniform(0.0, 1.0) <= 0.05:
+            weights = self.S_chess_nn.weights
+            shapes = [a.shape for a in weights]
+            flattened = np.concatenate([a.flatten() for a in weights])
+            randint = random.randint(0,len(flattened)-1)
+            flattened[randint] = np.random.randn()
+            newarray = []
+            indeweights = 0
+            for shape in shapes:
+                size = np.product(shape)
+                newarray.append(flattened[indeweights : indeweights + size].reshape(shape))
+                indeweights += size
+                self.S_chess_nn.weights = newarray 
         self.strength = None
             
                         

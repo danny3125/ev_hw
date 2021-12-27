@@ -74,8 +74,8 @@ class system:
             bonus_strength = bonus_strength.tolist()
         return strength
     def money_offer(money, epoch):
-        if epoch > 3:
-            epoch = 3
+        if epoch > 5:
+            epoch = 5
         return epoch# + int(money/10)  
     def chess_sell(chess): #chess like [0,3,2] => level,rank,type of chess 
         if chess[1] == 0:

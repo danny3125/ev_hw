@@ -116,6 +116,8 @@ def ev3(cfg):
         offspring.game_on()
         offspring.evaluateFitness()
         population.evaluateFitness()
+        population.game_on()
+        population.evaluateFitness()
         #update fitness values
         #survivor selection: elitist truncation using parents+offspring
         population.combinePops(offspring)
