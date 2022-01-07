@@ -9,6 +9,7 @@ from operator import attrgetter
 from Individual_autochess import *
 import random
 import numpy as np
+import matplotlib.pyplot as plt
 '''
 The auto chess game begins with eight individuals,each of them have a initial state:
     money, hand_cards(chess),strength of hand_cards,level, the population class have to build the whole
@@ -21,6 +22,7 @@ class Population:
     """
     uniprng=None
     crossoverFraction=None
+    playtimes = None
     def __init__(self, populationSize, total_epochs):
         """
         Population constructor
@@ -29,13 +31,18 @@ class Population:
         for i in range(populationSize):
             self.population.append(Individual())  #this part should be modified to load the individuals                                                                                                                                    
         self.total_epochs = total_epochs
-    
+        self.pointlist = []
+        self.goodpointlist = []
+        self.best_ten_list = []
+        self.best_list = []
     def game_on(self):
         for epoch in range(1,self.total_epochs+1):
             for player in self.population:
                 player.choicetime(epoch)
                 player.strength = None
-        
+        for player in self.population:
+            player.money = 0
+            player.level = 1
     def __len__(self):
         return len(self.population)
     
@@ -47,7 +54,13 @@ class Population:
         
     def evaluateFitness(self):
         for individual in self.population: individual.evaluateFitness()
-        
+    def suming_Fitness(self):
+        for individual in self.population: 
+            individual.suming_Fitness += individual.strength
+    def Clean_Fitness(self):
+        for individual in self.population:
+            individual.strength = individual.suming_Fitness / self.playtimes
+            individual.suming_Fitness = 0
     def copy(self):
         return copy.deepcopy(self)
         
@@ -94,17 +107,26 @@ class Population:
                 newPop.append(copy.deepcopy(self[index1]))
             elif self[index1].strength < self[index2].strength:
                 newPop.append(copy.deepcopy(self[index2]))
+                
             else:
-                rn=self.uniprng.random()
-                if rn > 0.5:
+                if np.sum(self[index1].hand_cards) > np.sum(self[index2].hand_cards):
+                    newPop.append(copy.deepcopy(self[index2]))
+                elif np.sum(self[index1].hand_cards) < np.sum(self[index2].hand_cards):
                     newPop.append(copy.deepcopy(self[index1]))
                 else:
-                    newPop.append(copy.deepcopy(self[index2]))        
+                    rn=self.uniprng.random()
+                    if rn > 0.5:
+                        newPop.append(copy.deepcopy(self[index1]))
+                    else:
+                        newPop.append(copy.deepcopy(self[index2]))      
         # overwrite old pop with newPop    
         self.population=newPop    
     def combinePops(self,otherPop):
         self.population.extend(otherPop.population)
 
+    def clean_hand(self):
+        for player in self.population:
+            player.cleanhands()
     def truncateSelect(self,newPopSize):
         #sort by fitness
         avg_strength = 0
@@ -113,18 +135,26 @@ class Population:
             avg_strength += item.strength
         avg_strength /= len(self.population)
         print('all_avg:',avg_strength)
-        avg_strength = 0
+        avg_strength_quarter = 0
         for item in self.population[:int(len(self.population)/4)]:
-            avg_strength += item.strength
-        avg_strength /= (len(self.population)/4)
+            avg_strength_quarter += item.strength
+        avg_strength_quarter /= (len(self.population)/4)
         avg_ten_strength = 0
         for item in self.population[:10]:
             avg_ten_strength += item.strength
         avg_ten_strength/=10
-        print('best_quarter avg:',avg_strength)
+        print('best_quarter avg:',avg_strength_quarter)
         print('best_avg_ten_strength:',avg_ten_strength)
         print('best_strength:',self.population[0].strength)
-        #then truncate the bottom
+        self.pointlist.append(avg_strength)
+        self.goodpointlist.append(avg_strength_quarter)
+        self.best_ten_list.append(avg_ten_strength)
+        self.best_list.append(self.population[0].strength)
+        plt.plot(self.pointlist, 'k--+')   # black dashed line, with "+" markers
+        plt.plot(self.goodpointlist, 'gd')     # green dimonds (no line)
+        plt.plot(self.best_ten_list, 'r:')     # red dotted line (no marker)
+        plt.plot(self.best_list, 'b:')     
+        plt.show()        #then truncate the bottom
         self.population=self.population[:newPopSize] 
 
 

@@ -15,6 +15,7 @@ class system:
     table_length = None
     maxchess_num = None
     proba_matrix = None
+    good_set_list = []
     def __init__(cls):
         #self.proba_table = [0] * len(chesstypelist)
         #self.faction_strength_table = faction_strength_table # waiting for a file call
@@ -57,7 +58,7 @@ class system:
         chess_id = np.nonzero(chess_set)
         for item in zip(chess_id[0],chess_id[1],chess_id[2]):
             #print('chess:',item,'number:',chess_set[item[0]][item[1]][item[2]])
-            strength += ((item[1]+1) * (2*item[0]+1)) * chess_set[item[0]][item[1]][item[2]]
+            strength += (((item[1]*0.5)+1) * (2*item[0]+1)) * chess_set[item[0]][item[1]][item[2]]
             bonus_strength.append(cls.faction_strength_table[int(item[1])][int(item[2])])
         if len(bonus_strength) > 0:
             maxfrac = max(bonus_strength)
@@ -72,6 +73,24 @@ class system:
                     strength += cls.faction_threshold[frac][1]
             bonus_strength += maxfrac
             bonus_strength = bonus_strength.tolist()
+# =============================================================================
+#             if you want to see the high score player hand_card, unconmand the code below
+# =============================================================================
+            """
+        if strength > 25:
+            if len(cls.good_set_list) == 0:
+                cls.good_set_list.append(chess_set)
+                print(chess_set)
+            else:
+                similar = False
+                for item in cls.good_set_list:
+                    temp = np.nonzero(item - chess_set)
+                    if len(temp[0]) == 0:
+                        similar = True
+                if (not similar):
+                    cls.good_set_list.append(chess_set)
+                    print(chess_set)
+                    """
         return strength
     def money_offer(money, epoch):
         if epoch > 5:

@@ -1,27 +1,3 @@
-#
-# ev3.py: An elitist (mu+mu) generational-with-overlap EA
-#
-#
-# To run: python ev3.py --input ev3_example.cfg
-#         python ev3.py --input my_params.cfg
-#
-# Basic features of ev3:
-#   - Supports self-adaptive mutation
-#   - Uses binary tournament selection for mating pool
-#   - Uses elitist truncation selection for survivors
-#
-'''
-So, we begin on a set of chesses with max rank 2, three types of rank 1 chess, one type of rank 2, 
-with a serie of bonus strangth if you combine a rank 2 chess with a particular rank 1 chess,
-8 players are included in one game, with health like 10, with max player level like 5,
-the state we have included the chess table, unsorted, the 'strength value' your set will become if you 
-take an action like 'take it all',or 'just pick one'
-there is no limit on the number of fight rounds, but every five rounds, there is a 'strength test' for
-every player, if the player lose, they will loss health, 
-the imformation the players will get on each round includes: health, set strangth, chess table, money.  
-the action the player can choose is to decide the money you want to keep in this round,
-and how to use the money you decide to spend.
-'''
 
 import optparse
 import sys
@@ -30,6 +6,8 @@ import math
 from random import Random
 from Population_autochess import *
 from autochess_sys import *
+import multiprocessing as mp
+from functools import partial
 
 
 #EV3 Config class 
@@ -49,7 +27,9 @@ class EV3_Config:
              'maxlevel':(int,True),
              'chesstypelist':(list,True),
              'maxchess_num':(int,True),
-             'table_length':(int,True)
+             'table_length':(int,True),
+             'playtimes':(int,True),
+             'randomSeed':(int,True)
              }
      
     #constructor
@@ -85,7 +65,10 @@ class EV3_Config:
 
         
 def ev3(cfg):
-    uniprng = Random()
+    uniprng=Random()
+    uniprng.seed(cfg.randomSeed)
+    normprng=Random()
+    normprng.seed(cfg.randomSeed+101)
     #set static params on classes
     # (probably not the most elegant approach, but let's keep things simple...)
     system.faction_strength_table = cfg.faction_strength_table
@@ -95,10 +78,14 @@ def ev3(cfg):
     system.table_length = cfg.table_length
     system.maxchess_num = cfg.maxchess_num
     system.proba_matrix = cfg.proba_matrix
+    Individual.uniprng=uniprng
+    Individual.normprng=normprng
     #create initial Population (random initialization)
     Population.uniprng=uniprng
     Population.crossoverFraction=cfg.crossoverFraction
+    Population.playtimes = cfg.playtimes
     population=Population(cfg.populationSize,cfg.total_epochs)
+    
     #print initial pop stats    
     #printStats(population,0)
 
@@ -109,22 +96,21 @@ def ev3(cfg):
         offspring=population.copy()
         offspring.evaluateFitness()
         offspring.conductTournament()
-        #perform crossover
+        offspring.clean_hand()
         offspring.crossover()
-        #random mutation
         offspring.mutate()
         offspring.game_on()
         offspring.evaluateFitness()
         population.evaluateFitness()
         population.game_on()
         population.evaluateFitness()
-        #update fitness values
-        #survivor selection: elitist truncation using parents+offspring
         population.combinePops(offspring)
         population.truncateSelect(cfg.populationSize)
-        #print population stats    
         
-        
+def island(cfg):
+    pool = mp.Pool(processes = (mp.cpu_count() - 6))
+    task = partial(ev3, cfg = cfg)
+    result = pool.map(task, [1,2])
 #
 # Main entry point
 #
@@ -166,5 +152,5 @@ def main(argv=None):
     
 
 if __name__ == '__main__':
-    main()
+    main(['-i','autochess.cfg', '-d'])
     
